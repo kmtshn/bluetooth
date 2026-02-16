@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QCY C30 Battery Monitor</title>
+    <style>
+        body { font-family: sans-serif; text-align: center; padding: 20px; }
+        button { font-size: 1.2rem; padding: 15px 30px; margin: 20px; background: #007bff; color: white; border: none; border-radius: 5px; }
+        #battery { font-size: 3rem; font-weight: bold; color: #333; margin-top: 20px; }
+        #log { font-size: 0.8rem; color: #666; margin-top: 30px; text-align: left; background: #f0f0f0; padding: 10px; }
+    </style>
+</head>
+<body>
+
+    <h1>QCY C30 バッテリー表示</h1>
+    <button id="connectBtn">デバイスに接続</button>
+
+    <div id="status">未接続</div>
+    <div id="battery">-- %</div>
+
+    <div id="log">ログ:</div>
+
+    <script>
+        // あなたが見つけたUUIDを設定
+        const SERVICE_UUID = '0000a001-0000-1000-8000-00805f9b34fb';
+        const CHAR_UUID    = '00000008-0000-1000-8000-00805f9b34fb';
+
+        const logDiv = document.getElementById('log');
+        function log(msg) {
+            logDiv.innerHTML += `<div>${msg}</div>`;
+            console.log(msg);
+        }
+
+        document.getElementById('connectBtn').addEventListener('click', async () => {
+            try {
+                log("1. デバイスを検索中...");
+                const device = await navigator.bluetooth.requestDevice({
+                    // 特定のサービスUUIDを持つデバイスだけを表示
+                    filters: [{ services: [SERVICE_UUID] }]
+                });
+
+                log(`2. "${device.name}" に接続中...`);
+                const server = await device.gatt.connect();
+
+                log("3. サービス(0xA001)を取得中...");
+                const service = await server.getPrimaryService(SERVICE_UUID);
+
+                log("4. キャラクタリスティック(0x0008)を取得中...");
+                const characteristic = await service.getCharacteristic(CHAR_UUID);
+
+                log("5. データを読み取り中...");
+                // 値を読み取る
+                const value = await characteristic.readValue();
+                
+                // データ解析: あなたが見つけた "00-64-00" の形式
+                // 1バイト目(index 0): 00 (ヘッダー?)
+                // 2バイト目(index 1): 64 (バッテリー残量 100%)
+                // 3バイト目(index 2): 00 (パディング?)
+                
+                const rawData = [];
+                for (let i = 0; i < value.byteLength; i++) {
+                    rawData.push('0x' + ('00' + value.getUint8(i).toString(16)).slice(-2));
+                }
+                log(`受信データ(Raw): [${rawData.join(', ')}]`);
+
+                const batteryLevel = value.getUint8(1); // 2番目のデータを取得
+                
+                document.getElementById('status').innerText = "接続済み";
+                document.getElementById('battery').innerText = batteryLevel + " %";
+                log(`解析結果: バッテリー ${batteryLevel}%`);
+
+                // (おまけ) 通知(Notify)をオンにして、リアルタイム更新を試みる
+                try {
+                    await characteristic.startNotifications();
+                    characteristic.addEventListener('characteristicvaluechanged', (event) => {
+                        const newVal = event.target.value.getUint8(1);
+                        document.getElementById('battery').innerText = newVal + " %";
+                        log(`更新検知: ${newVal}%`);
+                    });
+                    log("リアルタイム通知を有効化しました");
+                } catch(e) {
+                    log("※このデバイスは通知に対応していないか、拒否されました(読み取りのみ成功)");
+                }
+
+            } catch (error) {
+                log(`<span style="color:red">エラー: ${error}</span>`);
+            }
+        });
+    </script>
+</body>
+</html>
