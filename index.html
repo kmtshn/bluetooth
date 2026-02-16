@@ -36,8 +36,10 @@
             try {
                 log("1. デバイスを検索中...");
                 const device = await navigator.bluetooth.requestDevice({
-                    // 特定のサービスUUIDを持つデバイスだけを表示
-                    filters: [{ services: [SERVICE_UUID] }]
+                    // フィルターを外して、すべてのデバイスを表示させる
+                    acceptAllDevices: true,
+                    // その代わり、後で使う予定のUUIDをここで「予約」しておく
+                    optionalServices: [SERVICE_UUID] 
                 });
 
                 log(`2. "${device.name}" に接続中...`);
