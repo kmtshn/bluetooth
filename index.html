@@ -3,90 +3,123 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>QCY C30 Battery Monitor</title>
+    <title>QCY C30 Monitor</title>
     <style>
-        body { font-family: sans-serif; text-align: center; padding: 20px; }
-        button { font-size: 1.2rem; padding: 15px 30px; margin: 20px; background: #007bff; color: white; border: none; border-radius: 5px; }
-        #battery { font-size: 3rem; font-weight: bold; color: #333; margin-top: 20px; }
-        #log { font-size: 0.8rem; color: #666; margin-top: 30px; text-align: left; background: #f0f0f0; padding: 10px; }
+        body { font-family: sans-serif; text-align: center; padding: 20px; background-color: #f4f4f4; }
+        h1 { color: #333; }
+        button { font-size: 1.2rem; padding: 15px 30px; margin: 20px; background: #007bff; color: white; border: none; border-radius: 8px; cursor: pointer; }
+        button:hover { background: #0056b3; }
+        
+        .battery-container { display: flex; justify-content: center; gap: 20px; margin-top: 20px; }
+        .battery-box { background: white; padding: 20px; border-radius: 15px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); width: 120px; }
+        .label { font-size: 1.2rem; font-weight: bold; color: #555; display: block; margin-bottom: 10px; }
+        .value { font-size: 2.5rem; font-weight: bold; color: #28a745; }
+        .case-value { font-size: 1.5rem; color: #666; }
+        
+        #log { font-size: 0.8rem; color: #666; margin-top: 40px; text-align: left; background: #e9ecef; padding: 10px; border-radius: 5px; height: 150px; overflow-y: scroll;}
     </style>
 </head>
 <body>
 
-    <h1>QCY C30 バッテリー表示</h1>
+    <h1>QCY C30 バッテリーモニター</h1>
     <button id="connectBtn">デバイスに接続</button>
 
     <div id="status">未接続</div>
-    <div id="battery">-- %</div>
 
-    <div id="log">ログ:</div>
+    <div class="battery-container">
+        <div class="battery-box">
+            <span class="label">Left (L)</span>
+            <span id="bat-L" class="value">--</span><span style="font-size:1rem">%</span>
+        </div>
+        <div class="battery-box">
+            <span class="label">Right (R)</span>
+            <span id="bat-R" class="value">--</span><span style="font-size:1rem">%</span>
+        </div>
+    </div>
+
+    <div style="margin-top: 20px;">
+        <span class="label">Case: </span>
+        <span id="bat-Case" class="case-value">--</span> %
+    </div>
+
+    <div id="log">ログ待機中...</div>
 
     <script>
-        // あなたが見つけたUUIDを設定
+        // 解析済みのUUID
         const SERVICE_UUID = '0000a001-0000-1000-8000-00805f9b34fb';
         const CHAR_UUID    = '00000008-0000-1000-8000-00805f9b34fb';
 
         const logDiv = document.getElementById('log');
         function log(msg) {
-            logDiv.innerHTML += `<div>${msg}</div>`;
-            console.log(msg);
+            const time = new Date().toLocaleTimeString();
+            logDiv.innerHTML = `<div>[${time}] ${msg}</div>` + logDiv.innerHTML;
         }
 
         document.getElementById('connectBtn').addEventListener('click', async () => {
             try {
-                log("1. デバイスを検索中...");
+                log("デバイスを検索中...");
                 const device = await navigator.bluetooth.requestDevice({
-                    // フィルターを外して、すべてのデバイスを表示させる
+                    // 確実にQCYを見つけるために全てのデバイスを表示
                     acceptAllDevices: true,
-                    // その代わり、後で使う予定のUUIDをここで「予約」しておく
-                    optionalServices: [SERVICE_UUID] 
+                    optionalServices: [SERVICE_UUID]
                 });
 
-                log(`2. "${device.name}" に接続中...`);
+                log(`"${device.name}" に接続中...`);
                 const server = await device.gatt.connect();
 
-                log("3. サービス(0xA001)を取得中...");
+                log("サービスを取得中...");
                 const service = await server.getPrimaryService(SERVICE_UUID);
 
-                log("4. キャラクタリスティック(0x0008)を取得中...");
+                log("データを取得中...");
                 const characteristic = await service.getCharacteristic(CHAR_UUID);
 
-                log("5. データを読み取り中...");
-                // 値を読み取る
-                const value = await characteristic.readValue();
-                
-                // データ解析: あなたが見つけた "00-64-00" の形式
-                // 1バイト目(index 0): 00 (ヘッダー?)
-                // 2バイト目(index 1): 64 (バッテリー残量 100%)
-                // 3バイト目(index 2): 00 (パディング?)
-                
-                const rawData = [];
-                for (let i = 0; i < value.byteLength; i++) {
-                    rawData.push('0x' + ('00' + value.getUint8(i).toString(16)).slice(-2));
-                }
-                log(`受信データ(Raw): [${rawData.join(', ')}]`);
+                // データを読み取って表示する関数
+                const updateBattery = async () => {
+                    const value = await characteristic.readValue();
+                    
+                    // 生データのログ表示
+                    const rawData = [];
+                    for (let i = 0; i < value.byteLength; i++) {
+                        rawData.push('0x' + ('00' + value.getUint8(i).toString(16)).slice(-2));
+                    }
+                    log(`受信データ: [${rawData.join(', ')}]`);
 
-                const batteryLevel = value.getUint8(1); // 2番目のデータを取得
-                
-                document.getElementById('status').innerText = "接続済み";
-                document.getElementById('battery').innerText = batteryLevel + " %";
-                log(`解析結果: バッテリー ${batteryLevel}%`);
+                    // データの解析
+                    const left = value.getUint8(0);  // 1バイト目
+                    const right = value.getUint8(1); // 2バイト目
+                    const box = value.getUint8(2);   // 3バイト目(ケース?)
 
-                // (おまけ) 通知(Notify)をオンにして、リアルタイム更新を試みる
+                    // 0なら「ケース内」等の表示にするか、そのまま0%とするか
+                    document.getElementById('bat-L').innerText = left;
+                    document.getElementById('bat-R').innerText = right;
+                    document.getElementById('bat-Case').innerText = box;
+                    
+                    document.getElementById('status').innerText = "接続済み・データ受信完了";
+                };
+
+                // 初回の読み込み
+                await updateBattery();
+
+                // リアルタイム更新の試み
                 try {
                     await characteristic.startNotifications();
-                    characteristic.addEventListener('characteristicvaluechanged', (event) => {
-                        const newVal = event.target.value.getUint8(1);
-                        document.getElementById('battery').innerText = newVal + " %";
-                        log(`更新検知: ${newVal}%`);
+                    characteristic.addEventListener('characteristicvaluechanged', async (event) => {
+                        // 通知が来たときも同じ処理をする
+                        const value = event.target.value;
+                        const left = value.getUint8(0);
+                        const right = value.getUint8(1);
+                        document.getElementById('bat-L').innerText = left;
+                        document.getElementById('bat-R').innerText = right;
+                        log(`更新検知: L=${left}%, R=${right}%`);
                     });
-                    log("リアルタイム通知を有効化しました");
+                    log("自動更新を有効にしました");
                 } catch(e) {
-                    log("※このデバイスは通知に対応していないか、拒否されました(読み取りのみ成功)");
+                    log("自動更新は非対応です(手動更新のみ)");
                 }
 
             } catch (error) {
-                log(`<span style="color:red">エラー: ${error}</span>`);
+                log(`エラー: ${error}`);
+                alert("接続に失敗しました。もう一度試してください。");
             }
         });
     </script>
