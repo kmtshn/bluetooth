@@ -3,29 +3,28 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>BLE通信テスター</title>
+  <title>BLE通信テスター v2</title>
   <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body class="bg-slate-100 text-slate-800 font-sans min-h-screen p-4 md:p-8">
 
   <div class="max-w-3xl mx-auto bg-white rounded-xl shadow-md overflow-hidden">
     <div class="bg-blue-600 p-4 text-white">
-      <h1 class="text-2xl font-bold">BLE通信テスター (XENSE-83BTW)</h1>
-      <p class="text-blue-100 text-sm mt-1">Web Bluetooth APIを使用して直接コマンドを送受信します。</p>
+      <h1 class="text-2xl font-bold">BLE通信テスター v2 (XENSE-83BTW)</h1>
+      <p class="text-blue-100 text-sm mt-1">デバイス名で検索するように修正しました。</p>
     </div>
 
     <div class="p-6 space-y-6">
-      <!-- ブラウザチェック警告 -->
       <div id="compatibility-warning" class="hidden bg-red-100 border-l-4 border-red-500 text-red-700 p-4 rounded" role="alert">
         <p class="font-bold">警告</p>
-        <p>お使いのブラウザはWeb Bluetooth APIをサポートしていません。PCまたはAndroidのChrome/Edgeブラウザをご利用ください。（iOSのSafariでは動作しません）</p>
+        <p>お使いのブラウザはWeb Bluetooth APIをサポートしていません。</p>
       </div>
 
       <!-- 接続コントロール -->
       <div class="flex items-center justify-between border-b pb-4">
         <div>
           <h2 class="text-lg font-semibold">デバイス接続</h2>
-          <p class="text-sm text-gray-500">Service UUID: 0xfee9 で検索します</p>
+          <p class="text-sm text-gray-500">名前が「XENSE」で始まる機器を検索します</p>
         </div>
         <div class="flex gap-2">
           <button id="connectBtn" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded transition-colors shadow-sm">
@@ -49,14 +48,13 @@
       <div class="bg-slate-50 p-4 rounded-lg border border-slate-200">
         <h2 class="text-md font-semibold mb-2">コマンド送信 (WRITE)</h2>
         <div class="flex flex-col sm:flex-row gap-2">
-          <input type="text" id="hexInput" placeholder="例: 01 0A FF (16進数スペース区切り)" 
+          <input type="text" id="hexInput" placeholder="例: 01 0A FF (16進数)" 
                  class="flex-1 px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 uppercase font-mono text-sm"
                  disabled>
           <button id="sendBtn" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded transition-colors shadow-sm disabled:opacity-50" disabled>
             送信
           </button>
         </div>
-        <p class="text-xs text-gray-500 mt-2">WRITE UUID: ...9622 へデータを書き込みます。</p>
       </div>
 
       <!-- ログ表示 -->
@@ -66,13 +64,11 @@
           <button id="clearLogBtn" class="text-xs text-blue-600 hover:underline">ログをクリア</button>
         </div>
         <div id="logArea" class="bg-gray-900 text-green-400 font-mono text-xs p-4 rounded-lg h-64 overflow-y-auto whitespace-pre-wrap shadow-inner"></div>
-        <p class="text-xs text-gray-500 mt-2">NOTIFY UUID: ...9611 から受信したデータを表示します。</p>
       </div>
     </div>
   </div>
 
   <script>
-    // 画像から特定したUUID
     const SERVICE_UUID = "0000fee9-0000-1000-8000-00805f9b34bb";
     const WRITE_UUID = "d44bc439-abfd-45a2-b575-925416129622";
     const NOTIFY_UUID = "d44bc439-abfd-45a2-b575-925416129611";
@@ -81,7 +77,6 @@
     let writeCharacteristic = null;
     let notifyCharacteristic = null;
 
-    // UI要素の取得
     const connectBtn = document.getElementById('connectBtn');
     const disconnectBtn = document.getElementById('disconnectBtn');
     const sendBtn = document.getElementById('sendBtn');
@@ -89,32 +84,25 @@
     const logArea = document.getElementById('logArea');
     const clearLogBtn = document.getElementById('clearLogBtn');
     const statusIndicator = document.getElementById('statusIndicator');
-    const compatibilityWarning = document.getElementById('compatibility-warning');
 
-    // ブラウザ対応チェック
     if (!navigator.bluetooth) {
-      compatibilityWarning.classList.remove('hidden');
+      document.getElementById('compatibility-warning').classList.remove('hidden');
       connectBtn.disabled = true;
     }
 
-    // ログ出力関数
     function log(message, type = 'info') {
       const now = new Date();
       const timeStr = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}:${now.getSeconds().toString().padStart(2, '0')}.${now.getMilliseconds().toString().padStart(3, '0')}`;
-      
       const logElement = document.createElement('div');
-      
-      let colorClass = 'text-green-400'; // Default (RX etc)
+      let colorClass = 'text-green-400'; 
       if (type === 'error') colorClass = 'text-red-400';
       if (type === 'system') colorClass = 'text-blue-300';
       if (type === 'tx') colorClass = 'text-yellow-300';
-
       logElement.innerHTML = `<span class="text-gray-500">[${timeStr}]</span> <span class="${colorClass}">${message}</span>`;
       logArea.appendChild(logElement);
-      logArea.scrollTop = logArea.scrollHeight; // 自動スクロール
+      logArea.scrollTop = logArea.scrollHeight;
     }
 
-    // ステータス更新関数
     function updateStatus(connected) {
       if (connected) {
         statusIndicator.textContent = '接続済み';
@@ -135,17 +123,10 @@
       }
     }
 
-    // 16進数文字列をUint8Arrayに変換 (例: "01 0A FF" -> [1, 10, 255])
     function hexStringToUint8Array(hexString) {
-      // スペースやカンマを削除
       const cleanHex = hexString.replace(/[\s,]/g, '');
-      if (cleanHex.length % 2 !== 0) {
-        throw new Error("16進数の文字数が偶数ではありません。");
-      }
-      if (!/^[0-9a-fA-F]+$/.test(cleanHex)) {
-        throw new Error("無効な文字が含まれています。(0-9, A-Fのみ)");
-      }
-      
+      if (cleanHex.length % 2 !== 0) throw new Error("16進数の文字数が偶数ではありません。");
+      if (!/^[0-9a-fA-F]+$/.test(cleanHex)) throw new Error("無効な文字が含まれています。(0-9, A-Fのみ)");
       const arrayBuffer = new Uint8Array(cleanHex.length / 2);
       for (let i = 0; i < cleanHex.length; i += 2) {
         arrayBuffer[i / 2] = parseInt(cleanHex.substring(i, i + 2), 16);
@@ -153,114 +134,69 @@
       return arrayBuffer;
     }
 
-    // DataViewを16進数文字列に変換
     function dataViewToHexString(dataView) {
       let hexString = '';
       for (let i = 0; i < dataView.byteLength; i++) {
-        const hex = dataView.getUint8(i).toString(16).padStart(2, '0');
-        hexString += hex + ' ';
+        hexString += dataView.getUint8(i).toString(16).padStart(2, '0') + ' ';
       }
       return hexString.trim().toUpperCase();
     }
 
-    // --- Bluetooth 処理 ---
-
-    // 接続ボタン処理
     connectBtn.addEventListener('click', async () => {
       try {
         log('デバイスを検索中...', 'system');
         
-        // デバイスの要求
+        // 【修正点】検索条件を「サービスID」から「デバイス名」に変更し、
+        // 接続後にアクセスしたいサービスを optionalServices に指定する
         bluetoothDevice = await navigator.bluetooth.requestDevice({
-          filters: [{ services: [SERVICE_UUID] }]
+          filters: [{ namePrefix: 'XENSE' }], // 名前が「XENSE」から始まるデバイスを探す
+          optionalServices: [SERVICE_UUID]    // 接続後、このサービスへのアクセスを許可する
         });
 
-        log(`デバイス "${bluetoothDevice.name}" を選択しました。接続を試みます...`, 'system');
+        log(`デバイス "${bluetoothDevice.name}" を選択しました。接続中...`, 'system');
+        bluetoothDevice.addEventListener('gattserverdisconnected', () => {
+          log('デバイスから切断されました。', 'system');
+          updateStatus(false);
+        });
 
-        // 切断イベントのリスナー登録
-        bluetoothDevice.addEventListener('gattserverdisconnected', onDisconnected);
-
-        // GATTサーバーに接続
         const server = await bluetoothDevice.gatt.connect();
-        log('GATTサーバーに接続しました。サービスを取得中...', 'system');
-
-        // プライマリサービスの取得
         const service = await server.getPrimaryService(SERVICE_UUID);
         
-        // Notify (受信) Characteristic の取得と登録
-        log('NOTIFY Characteristic を取得中...', 'system');
         notifyCharacteristic = await service.getCharacteristic(NOTIFY_UUID);
         await notifyCharacteristic.startNotifications();
-        notifyCharacteristic.addEventListener('characteristicvaluechanged', handleNotifications);
-        log('通知(NOTIFY)の受信を開始しました。', 'system');
-
-        // Write (送信) Characteristic の取得
-        log('WRITE Characteristic を取得中...', 'system');
+        notifyCharacteristic.addEventListener('characteristicvaluechanged', (e) => {
+          log(`RX: ${dataViewToHexString(e.target.value)}`);
+        });
+        
         writeCharacteristic = await service.getCharacteristic(WRITE_UUID);
-        log('コマンド送信の準備が完了しました。', 'system');
-
+        
         updateStatus(true);
         log('--- 接続完了。測定テストを開始できます ---', 'system');
-
       } catch (error) {
         log(`接続エラー: ${error.message}`, 'error');
         updateStatus(false);
       }
     });
 
-    // 切断ボタン処理
     disconnectBtn.addEventListener('click', () => {
-      if (bluetoothDevice && bluetoothDevice.gatt.connected) {
-        log('切断を要求しています...', 'system');
-        bluetoothDevice.gatt.disconnect();
-      }
+      if (bluetoothDevice && bluetoothDevice.gatt.connected) bluetoothDevice.gatt.disconnect();
     });
 
-    // 切断時のイベントハンドラ
-    function onDisconnected(event) {
-      log('デバイスから切断されました。', 'system');
-      updateStatus(false);
-    }
-
-    // データ受信時のイベントハンドラ
-    function handleNotifications(event) {
-      const value = event.target.value;
-      const hexString = dataViewToHexString(value);
-      log(`RX: ${hexString}`); // 受信データは緑色で表示
-    }
-
-    // コマンド送信ボタン処理
     sendBtn.addEventListener('click', async () => {
-      if (!writeCharacteristic) {
-        log('エラー: WRITE Characteristicの準備ができていません。', 'error');
-        return;
-      }
-
+      if (!writeCharacteristic) return;
       const hexText = hexInput.value.trim();
       if (!hexText) return;
-
       try {
         const dataArray = hexStringToUint8Array(hexText);
-        log(`TX: ${dataViewToHexString(new DataView(dataArray.buffer))}`, 'tx'); // 送信データは黄色で表示
-        
-        // データを書き込む (writeValue or writeValueWithoutResponse)
-        // 機器の仕様に合わせて変更が必要な場合があります
+        log(`TX: ${dataViewToHexString(new DataView(dataArray.buffer))}`, 'tx');
         await writeCharacteristic.writeValue(dataArray);
-        
       } catch (error) {
         log(`送信エラー: ${error.message}`, 'error');
       }
     });
 
-    // Enterキーで送信
-    hexInput.addEventListener('keypress', (e) => {
-      if (e.key === 'Enter') sendBtn.click();
-    });
-
-    // ログクリア
-    clearLogBtn.addEventListener('click', () => {
-      logArea.innerHTML = '';
-    });
+    hexInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') sendBtn.click(); });
+    clearLogBtn.addEventListener('click', () => { logArea.innerHTML = ''; });
   </script>
 </body>
 </html>
