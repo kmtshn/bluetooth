@@ -211,7 +211,12 @@
           try {
             const char = await deviceInfoService.getCharacteristic(uuid);
             const value = await char.readValue();
-            document.getElementById(elementId).textContent = decoder.decode(value);
+            
+            // デコード後にNullバイト(\0)等の不要な制御文字を除去して文字化けを防ぐ
+            const rawString = decoder.decode(value);
+            const cleanString = rawString.replace(/\0/g, '').trim();
+            
+            document.getElementById(elementId).textContent = cleanString;
           } catch (e) {
             console.warn(`Failed to read characteristic ${uuid}:`, e);
           }
