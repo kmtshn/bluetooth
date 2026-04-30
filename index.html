@@ -1,319 +1,266 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>QCY Monitor</title>
-    
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/line-seed-jp-css@1.0.2/line-seed-jp.css">
-
-    <style>
-        :root {
-            --primary: #00C853; /* QCYっぽい鮮やかな緑 */
-            --primary-bg: #E8F5E9;
-            --text: #1A1A1A;
-            --text-sub: #8E8E93;
-            --bg: #F2F4F8;
-            --card-bg: #FFFFFF;
-            --shadow: 0 8px 24px rgba(0, 0, 0, 0.06);
-            --radius: 24px;
-        }
-
-        body {
-            font-family: 'LINE Seed JP', sans-serif;
-            background-color: var(--bg);
-            color: var(--text);
-            margin: 0;
-            padding: 0;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            min-height: 100vh;
-            -webkit-font-smoothing: antialiased;
-        }
-
-        /* ヘッダーエリア */
-        header {
-            width: 100%;
-            padding: 40px 20px 20px;
-            text-align: center;
-            box-sizing: border-box;
-        }
-
-        h1 {
-            font-weight: 700;
-            font-size: 24px;
-            margin: 0;
-            letter-spacing: -0.02em;
-        }
-
-        p.subtitle {
-            font-size: 14px;
-            color: var(--text-sub);
-            margin-top: 8px;
-            font-weight: 400;
-        }
-
-        /* メインコンテンツ */
-        main {
-            width: 100%;
-            max-width: 400px;
-            padding: 20px;
-            box-sizing: border-box;
-            display: flex;
-            flex-direction: column;
-            gap: 24px;
-        }
-
-        /* 接続ボタン */
-        .connect-btn {
-            background: linear-gradient(135deg, #2D3436 0%, #000000 100%);
-            color: white;
-            font-family: inherit;
-            font-weight: 700;
-            font-size: 16px;
-            padding: 18px;
-            border: none;
-            border-radius: 100px;
-            width: 100%;
-            cursor: pointer;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-            transition: transform 0.2s, box-shadow 0.2s;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 10px;
-        }
-
-        .connect-btn:active {
-            transform: scale(0.98);
-            box-shadow: 0 2px 6px rgba(0,0,0,0.1);
-        }
-
-        .connect-btn.connected {
-            background: #E0E0E0;
-            color: #888;
-            pointer-events: none;
-            box-shadow: none;
-        }
-
-        /* バッテリーカードエリア */
-        .status-container {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 16px;
-            opacity: 0.3; /* 未接続時は薄く */
-            filter: blur(4px);
-            transition: all 0.5s ease;
-            pointer-events: none;
-        }
-
-        .status-container.active {
-            opacity: 1;
-            filter: blur(0);
-            pointer-events: auto;
-        }
-
-        .card {
-            background: var(--card-bg);
-            border-radius: var(--radius);
-            padding: 24px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            box-shadow: var(--shadow);
-            position: relative;
-            overflow: hidden;
-        }
-
-        .card-label {
-            font-size: 14px;
-            font-weight: 700;
-            color: var(--text-sub);
-            margin-bottom: 12px;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-        }
-
-        .percent-wrapper {
-            position: relative;
-            z-index: 2;
-        }
-
-        .percent {
-            font-size: 48px;
-            font-weight: 800;
-            line-height: 1;
-            color: var(--text);
-        }
-
-        .unit {
-            font-size: 16px;
-            font-weight: 700;
-            color: var(--text-sub);
-            margin-left: 2px;
-        }
-
-        /* バッテリーバー（背景） */
-        .bar-bg {
-            width: 100%;
-            height: 6px;
-            background: #F0F0F0;
-            border-radius: 10px;
-            margin-top: 16px;
-            overflow: hidden;
-        }
-
-        .bar-fill {
-            height: 100%;
-            background: var(--primary);
-            width: 0%; /* JSで制御 */
-            border-radius: 10px;
-            transition: width 1s cubic-bezier(0.22, 1, 0.36, 1);
-        }
-
-        /* ログエリア（デバッグ用・控えめに） */
-        #status-text {
-            font-size: 12px;
-            color: #AAA;
-            text-align: center;
-            margin-top: 20px;
-            font-weight: 400;
-        }
-
-        /* アニメーション用 */
-        @keyframes popIn {
-            0% { transform: scale(0.9); opacity: 0; }
-            100% { transform: scale(1); opacity: 1; }
-        }
-        
-        .active .card {
-            animation: popIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
-        }
-        
-        .active .card:nth-child(2) {
-            animation-delay: 0.1s;
-        }
-
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BLE通信テスター</title>
+  <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body>
+<body class="bg-slate-100 text-slate-800 font-sans min-h-screen p-4 md:p-8">
 
-    <header>
-        <h1>QCY Monitor</h1>
-        <p class="subtitle">Battery Status Checker</p>
-    </header>
+  <div class="max-w-3xl mx-auto bg-white rounded-xl shadow-md overflow-hidden">
+    <div class="bg-blue-600 p-4 text-white">
+      <h1 class="text-2xl font-bold">BLE通信テスター (XENSE-83BTW)</h1>
+      <p class="text-blue-100 text-sm mt-1">Web Bluetooth APIを使用して直接コマンドを送受信します。</p>
+    </div>
 
-    <main>
-        <button id="connectBtn" class="connect-btn">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.55a11 11 0 0 1 14.08 0"></path><path d="M1.42 9a16 16 0 0 1 21.16 0"></path><path d="M8.53 16.11a6 6 0 0 1 6.95 0"></path><line x1="12" y1="20" x2="12.01" y2="20"></line></svg>
-            Connect Earbuds
-        </button>
+    <div class="p-6 space-y-6">
+      <!-- ブラウザチェック警告 -->
+      <div id="compatibility-warning" class="hidden bg-red-100 border-l-4 border-red-500 text-red-700 p-4 rounded" role="alert">
+        <p class="font-bold">警告</p>
+        <p>お使いのブラウザはWeb Bluetooth APIをサポートしていません。PCまたはAndroidのChrome/Edgeブラウザをご利用ください。（iOSのSafariでは動作しません）</p>
+      </div>
 
-        <div id="displayArea" class="status-container">
-            <div class="card">
-                <span class="card-label">Left</span>
-                <div class="percent-wrapper">
-                    <span id="text-L" class="percent">--</span><span class="unit">%</span>
-                </div>
-                <div class="bar-bg">
-                    <div id="bar-L" class="bar-fill"></div>
-                </div>
-            </div>
-
-            <div class="card">
-                <span class="card-label">Right</span>
-                <div class="percent-wrapper">
-                    <span id="text-R" class="percent">--</span><span class="unit">%</span>
-                </div>
-                <div class="bar-bg">
-                    <div id="bar-R" class="bar-fill"></div>
-                </div>
-            </div>
+      <!-- 接続コントロール -->
+      <div class="flex items-center justify-between border-b pb-4">
+        <div>
+          <h2 class="text-lg font-semibold">デバイス接続</h2>
+          <p class="text-sm text-gray-500">Service UUID: 0xfee9 で検索します</p>
         </div>
+        <div class="flex gap-2">
+          <button id="connectBtn" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded transition-colors shadow-sm">
+            接続する
+          </button>
+          <button id="disconnectBtn" class="bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded transition-colors shadow-sm disabled:opacity-50" disabled>
+            切断
+          </button>
+        </div>
+      </div>
 
-        <div id="status-text">デバイス未接続</div>
-    </main>
+      <!-- ステータス -->
+      <div class="flex items-center gap-2 text-sm">
+        <span class="font-semibold">ステータス:</span>
+        <span id="statusIndicator" class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+          未接続
+        </span>
+      </div>
 
-    <script>
-        const SERVICE_UUID = '0000a001-0000-1000-8000-00805f9b34fb';
-        const CHAR_UUID    = '00000008-0000-1000-8000-00805f9b34fb';
+      <!-- コマンド送信 -->
+      <div class="bg-slate-50 p-4 rounded-lg border border-slate-200">
+        <h2 class="text-md font-semibold mb-2">コマンド送信 (WRITE)</h2>
+        <div class="flex flex-col sm:flex-row gap-2">
+          <input type="text" id="hexInput" placeholder="例: 01 0A FF (16進数スペース区切り)" 
+                 class="flex-1 px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 uppercase font-mono text-sm"
+                 disabled>
+          <button id="sendBtn" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded transition-colors shadow-sm disabled:opacity-50" disabled>
+            送信
+          </button>
+        </div>
+        <p class="text-xs text-gray-500 mt-2">WRITE UUID: ...9622 へデータを書き込みます。</p>
+      </div>
 
-        const btn = document.getElementById('connectBtn');
-        const statusText = document.getElementById('status-text');
-        const displayArea = document.getElementById('displayArea');
+      <!-- ログ表示 -->
+      <div>
+        <div class="flex justify-between items-end mb-2">
+          <h2 class="text-md font-semibold">通信ログ</h2>
+          <button id="clearLogBtn" class="text-xs text-blue-600 hover:underline">ログをクリア</button>
+        </div>
+        <div id="logArea" class="bg-gray-900 text-green-400 font-mono text-xs p-4 rounded-lg h-64 overflow-y-auto whitespace-pre-wrap shadow-inner"></div>
+        <p class="text-xs text-gray-500 mt-2">NOTIFY UUID: ...9611 から受信したデータを表示します。</p>
+      </div>
+    </div>
+  </div>
 
-        // UI更新関数
-        function updateUI(left, right) {
-            // 数値更新
-            document.getElementById('text-L').innerText = left;
-            document.getElementById('text-R').innerText = right;
-            
-            // バーの長さ更新
-            document.getElementById('bar-L').style.width = left + '%';
-            document.getElementById('bar-R').style.width = right + '%';
+  <script>
+    // 画像から特定したUUID
+    const SERVICE_UUID = "0000fee9-0000-1000-8000-00805f9b34bb";
+    const WRITE_UUID = "d44bc439-abfd-45a2-b575-925416129622";
+    const NOTIFY_UUID = "d44bc439-abfd-45a2-b575-925416129611";
 
-            // 色の変更 (20%以下で赤くする)
-            const checkColor = (val, elementId) => {
-                const el = document.getElementById(elementId);
-                if(val <= 20) el.style.backgroundColor = '#FF3B30'; // Red
-                else el.style.backgroundColor = '#00C853'; // Green
-            };
-            checkColor(left, 'bar-L');
-            checkColor(right, 'bar-R');
-        }
+    let bluetoothDevice = null;
+    let writeCharacteristic = null;
+    let notifyCharacteristic = null;
 
-        btn.addEventListener('click', async () => {
-            try {
-                statusText.innerText = "Searching for QCY device...";
-                
-                const device = await navigator.bluetooth.requestDevice({
-                    acceptAllDevices: true,
-                    optionalServices: [SERVICE_UUID]
-                });
+    // UI要素の取得
+    const connectBtn = document.getElementById('connectBtn');
+    const disconnectBtn = document.getElementById('disconnectBtn');
+    const sendBtn = document.getElementById('sendBtn');
+    const hexInput = document.getElementById('hexInput');
+    const logArea = document.getElementById('logArea');
+    const clearLogBtn = document.getElementById('clearLogBtn');
+    const statusIndicator = document.getElementById('statusIndicator');
+    const compatibilityWarning = document.getElementById('compatibility-warning');
 
-                statusText.innerText = "Connecting...";
-                
-                const server = await device.gatt.connect();
-                const service = await server.getPrimaryService(SERVICE_UUID);
-                const characteristic = await service.getCharacteristic(CHAR_UUID);
+    // ブラウザ対応チェック
+    if (!navigator.bluetooth) {
+      compatibilityWarning.classList.remove('hidden');
+      connectBtn.disabled = true;
+    }
 
-                // 読み取り処理
-                const readBattery = async () => {
-                    const value = await characteristic.readValue();
-                    const left = value.getUint8(0);
-                    const right = value.getUint8(1);
+    // ログ出力関数
+    function log(message, type = 'info') {
+      const now = new Date();
+      const timeStr = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}:${now.getSeconds().toString().padStart(2, '0')}.${now.getMilliseconds().toString().padStart(3, '0')}`;
+      
+      const logElement = document.createElement('div');
+      
+      let colorClass = 'text-green-400'; // Default (RX etc)
+      if (type === 'error') colorClass = 'text-red-400';
+      if (type === 'system') colorClass = 'text-blue-300';
+      if (type === 'tx') colorClass = 'text-yellow-300';
 
-                    updateUI(left, right);
-                    
-                    // UIの状態変更
-                    displayArea.classList.add('active');
-                    btn.classList.add('connected');
-                    btn.innerHTML = `Connected: ${device.name}`;
-                    statusText.innerText = "● Live Data Active";
-                };
+      logElement.innerHTML = `<span class="text-gray-500">[${timeStr}]</span> <span class="${colorClass}">${message}</span>`;
+      logArea.appendChild(logElement);
+      logArea.scrollTop = logArea.scrollHeight; // 自動スクロール
+    }
 
-                // 初回実行
-                await readBattery();
+    // ステータス更新関数
+    function updateStatus(connected) {
+      if (connected) {
+        statusIndicator.textContent = '接続済み';
+        statusIndicator.className = 'inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800';
+        connectBtn.disabled = true;
+        disconnectBtn.disabled = false;
+        hexInput.disabled = false;
+        sendBtn.disabled = false;
+      } else {
+        statusIndicator.textContent = '未接続';
+        statusIndicator.className = 'inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800';
+        connectBtn.disabled = false;
+        disconnectBtn.disabled = true;
+        hexInput.disabled = true;
+        sendBtn.disabled = true;
+        writeCharacteristic = null;
+        notifyCharacteristic = null;
+      }
+    }
 
-                // 通知設定
-                try {
-                    await characteristic.startNotifications();
-                    characteristic.addEventListener('characteristicvaluechanged', (event) => {
-                        const val = event.target.value;
-                        updateUI(val.getUint8(0), val.getUint8(1));
-                    });
-                } catch(e) {
-                    console.log("Notification not supported");
-                }
+    // 16進数文字列をUint8Arrayに変換 (例: "01 0A FF" -> [1, 10, 255])
+    function hexStringToUint8Array(hexString) {
+      // スペースやカンマを削除
+      const cleanHex = hexString.replace(/[\s,]/g, '');
+      if (cleanHex.length % 2 !== 0) {
+        throw new Error("16進数の文字数が偶数ではありません。");
+      }
+      if (!/^[0-9a-fA-F]+$/.test(cleanHex)) {
+        throw new Error("無効な文字が含まれています。(0-9, A-Fのみ)");
+      }
+      
+      const arrayBuffer = new Uint8Array(cleanHex.length / 2);
+      for (let i = 0; i < cleanHex.length; i += 2) {
+        arrayBuffer[i / 2] = parseInt(cleanHex.substring(i, i + 2), 16);
+      }
+      return arrayBuffer;
+    }
 
-            } catch (error) {
-                console.error(error);
-                statusText.innerText = "Connection Cancelled or Failed";
-                // 3秒後にリセット
-                setTimeout(() => statusText.innerText = "デバイス未接続", 3000);
-            }
+    // DataViewを16進数文字列に変換
+    function dataViewToHexString(dataView) {
+      let hexString = '';
+      for (let i = 0; i < dataView.byteLength; i++) {
+        const hex = dataView.getUint8(i).toString(16).padStart(2, '0');
+        hexString += hex + ' ';
+      }
+      return hexString.trim().toUpperCase();
+    }
+
+    // --- Bluetooth 処理 ---
+
+    // 接続ボタン処理
+    connectBtn.addEventListener('click', async () => {
+      try {
+        log('デバイスを検索中...', 'system');
+        
+        // デバイスの要求
+        bluetoothDevice = await navigator.bluetooth.requestDevice({
+          filters: [{ services: [SERVICE_UUID] }]
         });
-    </script>
+
+        log(`デバイス "${bluetoothDevice.name}" を選択しました。接続を試みます...`, 'system');
+
+        // 切断イベントのリスナー登録
+        bluetoothDevice.addEventListener('gattserverdisconnected', onDisconnected);
+
+        // GATTサーバーに接続
+        const server = await bluetoothDevice.gatt.connect();
+        log('GATTサーバーに接続しました。サービスを取得中...', 'system');
+
+        // プライマリサービスの取得
+        const service = await server.getPrimaryService(SERVICE_UUID);
+        
+        // Notify (受信) Characteristic の取得と登録
+        log('NOTIFY Characteristic を取得中...', 'system');
+        notifyCharacteristic = await service.getCharacteristic(NOTIFY_UUID);
+        await notifyCharacteristic.startNotifications();
+        notifyCharacteristic.addEventListener('characteristicvaluechanged', handleNotifications);
+        log('通知(NOTIFY)の受信を開始しました。', 'system');
+
+        // Write (送信) Characteristic の取得
+        log('WRITE Characteristic を取得中...', 'system');
+        writeCharacteristic = await service.getCharacteristic(WRITE_UUID);
+        log('コマンド送信の準備が完了しました。', 'system');
+
+        updateStatus(true);
+        log('--- 接続完了。測定テストを開始できます ---', 'system');
+
+      } catch (error) {
+        log(`接続エラー: ${error.message}`, 'error');
+        updateStatus(false);
+      }
+    });
+
+    // 切断ボタン処理
+    disconnectBtn.addEventListener('click', () => {
+      if (bluetoothDevice && bluetoothDevice.gatt.connected) {
+        log('切断を要求しています...', 'system');
+        bluetoothDevice.gatt.disconnect();
+      }
+    });
+
+    // 切断時のイベントハンドラ
+    function onDisconnected(event) {
+      log('デバイスから切断されました。', 'system');
+      updateStatus(false);
+    }
+
+    // データ受信時のイベントハンドラ
+    function handleNotifications(event) {
+      const value = event.target.value;
+      const hexString = dataViewToHexString(value);
+      log(`RX: ${hexString}`); // 受信データは緑色で表示
+    }
+
+    // コマンド送信ボタン処理
+    sendBtn.addEventListener('click', async () => {
+      if (!writeCharacteristic) {
+        log('エラー: WRITE Characteristicの準備ができていません。', 'error');
+        return;
+      }
+
+      const hexText = hexInput.value.trim();
+      if (!hexText) return;
+
+      try {
+        const dataArray = hexStringToUint8Array(hexText);
+        log(`TX: ${dataViewToHexString(new DataView(dataArray.buffer))}`, 'tx'); // 送信データは黄色で表示
+        
+        // データを書き込む (writeValue or writeValueWithoutResponse)
+        // 機器の仕様に合わせて変更が必要な場合があります
+        await writeCharacteristic.writeValue(dataArray);
+        
+      } catch (error) {
+        log(`送信エラー: ${error.message}`, 'error');
+      }
+    });
+
+    // Enterキーで送信
+    hexInput.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') sendBtn.click();
+    });
+
+    // ログクリア
+    clearLogBtn.addEventListener('click', () => {
+      logArea.innerHTML = '';
+    });
+  </script>
 </body>
 </html>
